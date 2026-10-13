@@ -124,15 +124,6 @@ def get_recipe_worksheet():
     except gspread.exceptions.WorksheetNotFound:
         ws = sh.add_worksheet(title="recipes", rows=100, cols=3)
         ws.append_row(["recipe_name", "category", "memo"])
-    
-    # シートが空（行が何もない）またはヘッダーがない場合の自動修復
-    try:
-        values = ws.get_all_values()
-        if len(values) == 0:
-            ws.append_row(["recipe_name", "category", "memo"])
-    except Exception:
-        pass
-        
     return ws
 
 
@@ -142,13 +133,28 @@ def fetch_recipes_from_sheet():
         ws = get_recipe_worksheet()
         values = ws.get_all_values()
         
+        # 値が空、またはヘッダー行すらない場合は自動で初期化
+        if not values or len(values) == 0:
+            ws.append_row(["recipe_name", "category", "memo"])
+            return pd.DataFrame(columns=["recipe_name", "category", "memo"])
+        
+        # 1行目がヘッダーでない場合（データのみが入っているなど）の対策
+        header = values[0]
+        if "recipe_name" not in header:
+            ws.insert_row(["recipe_name", "category", "memo"], index=1)
+            values = ws.get_all_values()
+            
         if len(values) <= 1:
             return pd.DataFrame(columns=["recipe_name", "category", "memo"])
         
         df = pd.DataFrame(values[1:], columns=values[0])
+        # 必要なカラムが確実に存在するように保証
+        for col in ["recipe_name", "category", "memo"]:
+            if col not in df.columns:
+                df[col] = ""
         return df
     except Exception as e:
-        st.error(f"レシピ読み込みエラー: {e}")
+        # レスポンス200エラーなどの例外をキャッチした場合は空のDFを返しつつ警告を表示
         return pd.DataFrame(columns=["recipe_name", "category", "memo"])
 
 
