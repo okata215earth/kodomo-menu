@@ -117,16 +117,23 @@ def get_gspread_client():
 
 def get_recipe_worksheet():
     gc = get_gspread_client()
-    # 献立用シート名を指定（既存と分ける場合はシート名を変更してください）
     spreadsheet_name = st.secrets["spreadsheet"]["spreadsheet_name"]
     sh = gc.open(spreadsheet_name)
     try:
-        return sh.worksheet("recipes")
+        ws = sh.worksheet("recipes")
     except gspread.exceptions.WorksheetNotFound:
-        # シートがなければ作成してヘッダーを追加
-        ws = sh.add_worksheet(title="recipes", rows=100, cols=5)
+        ws = sh.add_worksheet(title="recipes", rows=100, cols=3)
         ws.append_row(["recipe_name", "category", "memo"])
-        return ws
+    
+    # シートが空（行が何もない）またはヘッダーがない場合の自動修復
+    try:
+        values = ws.get_all_values()
+        if len(values) == 0:
+            ws.append_row(["recipe_name", "category", "memo"])
+    except Exception:
+        pass
+        
+    return ws
 
 
 @st.cache_data(ttl=60)
@@ -197,7 +204,6 @@ with tab1:
         if len(main_dishes) < 1 or len(sub_dishes) < 2:
             st.warning("⚠️ ガチャを回すには「主菜」を1つ以上、「副菜・汁物」を2つ以上登録してください！")
         else:
-            # ランダム選出
             selected_main = main_dishes.sample(n=1).iloc[0]
             selected_subs = sub_dishes.sample(n=2).reset_index(drop=True)
 
@@ -207,14 +213,12 @@ with tab1:
                 "sub2": selected_subs.iloc[1]
             }
 
-    # ガチャ結果の表示
     if "today_menu" in st.session_state:
         menu = st.session_state["today_menu"]
         
         st.markdown("---")
-        st.markdown("### 🌟  А 本日の献立提案")
+        st.markdown("### 🌟 本日の献立提案")
         
-        # 主菜
         m = menu["main"]
         st.markdown(f"""
         <div class="menu-card-main">
@@ -224,7 +228,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        # 副菜1
         s1 = menu["sub1"]
         st.markdown(f"""
         <div class="menu-card-sub">
@@ -234,7 +237,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        # 副菜2
         s2 = menu["sub2"]
         st.markdown(f"""
         <div class="menu-card-sub">
