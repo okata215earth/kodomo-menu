@@ -10,7 +10,7 @@ from google.oauth2.service_account import Credentials
 # 1. ページ基本設定 & タイムゾーン設定
 # --------------------------------------------------
 st.set_page_config(
-    page_title="幼児の毎日献立表（夜）",
+    page_title="愛怜の毎日献立表",
     page_icon="🍳",
     layout="centered"
 )
