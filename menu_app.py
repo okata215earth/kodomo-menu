@@ -204,20 +204,59 @@ with tab1:
     st.write("ボタンを押すと、主菜1つと副菜・汁物2つをランダムに組み合わせます！")
 
     if st.button("🍳 本日の献立を決める！"):
-        main_dishes = df_recipes[df_recipes["category"] == "主菜"]
-        sub_dishes = df_recipes[df_recipes["category"] == "副菜・汁物"]
+            main_dishes = df_recipes[df_recipes["category"] == "主菜"]
+            sub_dishes = df_recipes[df_recipes["category"] == "副菜・汁物"]
 
-        if len(main_dishes) < 1 or len(sub_dishes) < 2:
-            st.warning("⚠️ ガチャを回すには「主菜」を1つ以上、「副菜・汁物」を2つ以上登録してください！")
-        else:
-            selected_main = main_dishes.sample(n=1).iloc[0]
-            selected_subs = sub_dishes.sample(n=2).reset_index(drop=True)
+            if len(main_dishes) < 1 or len(sub_dishes) < 2:
+                st.warning("⚠️ ガチャを回すには「主菜」を1つ以上、「副菜・汁物」を2つ以上登録してください！")
+            else:
+                # 主菜を1つ選出
+                selected_main = main_dishes.sample(n=1).iloc[0]
 
-            st.session_state["today_menu"] = {
-                "main": selected_main,
-                "sub1": selected_subs.iloc[0],
-                "sub2": selected_subs.iloc[1]
-            }
+                # 副菜・汁物の中から「お味噌汁（みそ汁）」が含まれるものを分離
+                # （レシピ名またはメモに「味噌汁」または「みそ汁」が含まれるものを判定）
+                is_miso = lambda row: "味噌汁" in str(row["recipe_name"]) or "みそ汁" in str(row["recipe_name"]) or "味噌汁" in str(row["memo"]) or "みそ汁" in str(row["memo"])
+                
+                miso_dishes = sub_dishes[sub_dishes.apply(is_miso, axis=1)]
+                other_sub_dishes = sub_dishes[~sub_dishes.apply(is_miso, axis=1)]
+
+                selected_sub1 = None
+                selected_sub2 = None
+
+                # お味噌汁系レシピが1つ以上ある場合、最大1つに制限する
+                if not miso_dishes.empty and len(sub_dishes) >= 2:
+                    # 50%の確率でお味噌汁を1つ枠に組み込む、またはお味噌汁を必ず1枠に入れるなどの調整が可能ですが、
+                    # ここでは「お味噌汁系から最大1つ、その他から残りの枠を選ぶ」安全なロジックにします
+                    
+                    # パターンA: お味噌汁を1つ含める場合
+                    chosen_miso = miso_dishes.sample(n=1).iloc[0]
+                    
+                    # 残り1枠を「お味噌汁以外」から選ぶ（もしお味噌汁以外が足りない場合は例外処理）
+                    pool_for_remaining = pd.concat([other_sub_dishes, miso_dishes.drop(chosen_miso.name)]).drop_duplicates()
+                    
+                    if not pool_for_remaining.empty:
+                        chosen_other = pool_for_remaining.sample(n=1).iloc[0]
+                        # ランダムに順番をシャッフル
+                        subs_list = [chosen_miso, chosen_other]
+                        random.shuffle(subs_list)
+                        selected_sub1 = subs_list[0]
+                        selected_sub2 = subs_list[1]
+                    else:
+                        # プールが足りない場合は通常ランダム
+                        selected_subs = sub_dishes.sample(n=2).reset_index(drop=True)
+                        selected_sub1 = selected_subs.iloc[0]
+                        selected_sub2 = selected_subs.iloc[1]
+                else:
+                    # お味噌汁系がない、または条件に満たない場合は通常のランダム2つ
+                    selected_subs = sub_dishes.sample(n=2).reset_index(drop=True)
+                    selected_sub1 = selected_subs.iloc[0]
+                    selected_sub2 = selected_subs.iloc[1]
+
+                st.session_state["today_menu"] = {
+                    "main": selected_main,
+                    "sub1": selected_sub1,
+                    "sub2": selected_sub2
+                }
 
     if "today_menu" in st.session_state:
         menu = st.session_state["today_menu"]
