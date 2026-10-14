@@ -96,7 +96,7 @@ st.markdown("""
 # ヘッダー
 st.markdown("""
 <div class="menu-title-container">
-    <div class="menu-title">🍳 幼児の毎日献立表（夜）</div>
+    <div class="menu-title">🍳 愛怜の毎日献立表（夜）</div>
     <div class="menu-subtitle">今日のごはん、何にする？迷ったらガチャ！</div>
 </div>
 """, unsafe_allow_html=True)
