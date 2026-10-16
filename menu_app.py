@@ -148,13 +148,11 @@ def fetch_recipes_from_sheet():
 
 
 def load_recipes():
-    # session_stateにデータがない、または強制リロードしたい場合
     if "df_recipes" not in st.session_state or st.session_state["df_recipes"].empty:
         df = fetch_recipes_from_sheet()
         if df is not None and not df.empty:
             st.session_state["df_recipes"] = df
         else:
-            # 万が一読み込めなかった場合の初期値
             st.session_state["df_recipes"] = pd.DataFrame(columns=["recipe_name", "category", "memo"])
     return st.session_state["df_recipes"]
 
@@ -296,7 +294,7 @@ with tab2:
                 st.success(f"「{recipe_name}」を登録しました！ 🎉")
                 st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=Thread := None)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # --- タブ3：レシピ一覧＆削除 ---
@@ -339,7 +337,7 @@ with tab3:
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
                 if st.button("🗑️ 削除", key=f"del_rec_{idx}"):
                     delete_recipe(row["recipe_name"], row["category"])
-                    st.toast(f"「{row['recipe_name']}」を削除しました")
+                    st.toast(f"`{row['recipe_name']}` を削除しました")
                     st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
