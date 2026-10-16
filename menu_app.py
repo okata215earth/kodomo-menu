@@ -110,7 +110,14 @@ def get_gspread_client():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    info = json.loads(st.secrets["gcp_service_account"]["json_text"])
+    raw_json = st.secrets["gcp_service_account"]["json_text"]
+    try:
+        info = json.loads(raw_json, strict=False)
+    except Exception:
+        # 改行コードのエスケープを補正して再トライ
+        cleaned_json = raw_json.replace("\n", "\\n").replace("\r", "")
+        info = json.loads(cleaned_json, strict=False)
+        
     credentials = Credentials.from_service_account_info(info, scopes=scopes)
     return gspread.authorize(credentials)
 
@@ -139,7 +146,6 @@ def fetch_recipes_from_sheet():
         for col in ["recipe_name", "category", "memo"]:
             if col not in df.columns:
                 df[col] = ""
-        # 空行の除外
         df = df[df["recipe_name"].str.strip() != ""]
         return df
     except Exception as e:
@@ -201,10 +207,8 @@ with tab1:
         if len(main_dishes) < 1 or len(sub_dishes) < 2:
             st.warning("⚠️ ガチャを回すには「主菜」を1つ以上、「副菜・汁物」を2つ以上登録してください！")
         else:
-            # 主菜を1つ選出
             selected_main = main_dishes.sample(n=1).iloc[0]
 
-            # 副菜・汁物の中から「お味噌汁（みそ汁）」が含まれるものを分離
             is_miso = lambda row: "味噌汁" in str(row["recipe_name"]) or "みそ汁" in str(row["recipe_name"]) or "味噌汁" in str(row["memo"]) or "みそ汁" in str(row["memo"])
             
             miso_dishes = sub_dishes[sub_dishes.apply(is_miso, axis=1)]
@@ -337,7 +341,7 @@ with tab3:
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
                 if st.button("🗑️ 削除", key=f"del_rec_{idx}"):
                     delete_recipe(row["recipe_name"], row["category"])
-                    st.toast(f"`{row['recipe_name']}` を削除しました")
+                    st.toast(f"「{row['recipe_name']}」を削除しました")
                     st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
